@@ -1,7 +1,8 @@
 <div align="center">
 
-# SlimBrave
+# SlimBrave 2
 <img src="https://github.com/user-attachments/assets/3e90a996-a74a-4ca1-bea6-0869275bab58" width="200" height="300">
+SlimBrave 2 was created because the original creator of SlimBrave stopped responding. SlimBrave 2 presents an updated version of SlimBrave with Linux support and up to date policies.
 </div>
 
 ---
@@ -54,9 +55,6 @@ SlimBrave is a powerful PowerShell script designed for Windows users to streamli
 - **Force Google SafeSearch**  
    Enforces SafeSearch across Google searches.
 
-- **Disable IPFS**  
-   Disables InterPlanetary File System support.
-
 - **Disable Spellcheck**  
    Disables browser spellcheck functionality.
 
@@ -86,10 +84,34 @@ SlimBrave is a powerful PowerShell script designed for Windows users to streamli
 
 # How to Run
 
-### Run the command below in PowerShell:
+### Windows
+
+Run the command below in PowerShell:
 
 ```ps1
 iwr "https://raw.githubusercontent.com/ltx0101/SlimBrave/main/SlimBrave.ps1" -OutFile "SlimBrave.ps1"; .\SlimBrave.ps1
+```
+
+---
+
+### Linux (managed policies)
+
+SlimBrave for Linux writes Brave managed policies to `/etc/brave/policies/managed/slimbrave.json`.
+
+```bash
+sudo ./SlimBrave.sh --import "./Presets/Maximum Privacy Preset.json"
+```
+
+Interactive setup (terminal):
+
+```bash
+sudo ./SlimBrave.sh --interactive
+```
+
+To export a PowerShell-compatible config from the current policy file:
+
+```bash
+sudo ./SlimBrave.sh --export "./SlimBraveSettings.json"
 ```
 
 ---
