@@ -2,10 +2,11 @@
 
 # SlimBrave 2
 <img src="https://github.com/user-attachments/assets/3e90a996-a74a-4ca1-bea6-0869275bab58" width="200" height="300">
-SlimBrave 2 was created because the original creator of SlimBrave stopped responding. SlimBrave 2 presents an updated version of SlimBrave with Linux support and up to date policies.
 </div>
 
 ---
+SlimBrave 2 was created because the original creator of SlimBrave stopped responding. SlimBrave 2 presents an updated version of SlimBrave with Linux support and up to date policies.
+
 
 ## Brave Browser Debloater
 
