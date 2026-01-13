@@ -12,7 +12,6 @@
         "WebRtcIPHandling",
         "QuicAllowed",
         "BlockThirdPartyCookies",
-        "EnableDoNotTrack",
         "ForceGoogleSafeSearch",
         "IncognitoModeAvailability",
         "BraveRewardsDisabled",
