@@ -9,7 +9,6 @@
         "WebRtcIPHandling",
         "QuicAllowed",
         "BlockThirdPartyCookies",
-        "EnableDoNotTrack",
         "ForceGoogleSafeSearch",
         "BraveRewardsDisabled",
         "BraveWalletDisabled",
