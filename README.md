@@ -115,6 +115,16 @@ To export a PowerShell-compatible config from the current policy file:
 sudo ./SlimBrave.sh --export "./SlimBraveSettings.json"
 ```
 
+## DNS-over-HTTPS (DoH) modes
+
+Brave accepts the following policy values for `DnsOverHttpsMode`:
+
+- `off` — Disable DNS-over-HTTPS.
+- `automatic` — Enable DoH with insecure fallback.
+- `secure` — Enable DoH without insecure fallback.
+
+To use a custom provider, set `DnsOverHttpsTemplates` to the provider URL (for example, `https://cloudflare-dns.com/dns-query` or `https://dns.quad9.net/dns-query`) alongside `DnsOverHttpsMode=secure`. On Linux, you can supply the same value via `DnsTemplates` in the SlimBrave JSON or pass `--doh-templates` when using `SlimBrave.sh`.
+
 ---
 
 ## Extras:

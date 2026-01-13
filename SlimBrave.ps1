@@ -14,13 +14,29 @@ if (-not (Test-Path -Path $registryPath)) {
 
 Clear-Host
 
-function Set-DnsMode {
+function Set-DnsSettings {
     param (
-        [string] $dnsMode
+        [string] $dnsMode,
+        [string] $dnsTemplates
     )
-    $regKey = "HKLM:\\Software\\Policies\\BraveSoftware\\Brave"
-    Set-ItemProperty -Path $regKey -Name "DnsOverHttpsMode" -Value $dnsMode -Type String -Force
-    [System.Windows.Forms.MessageBox]::Show("DNS Over HTTPS Mode has been set to $dnsMode.", "Success", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
+    $regKey = "HKLM:\Software\Policies\BraveSoftware\Brave"
+    $resolvedMode = $dnsMode
+
+    if ($dnsMode -eq "custom") {
+        if ([string]::IsNullOrWhiteSpace($dnsTemplates)) {
+            [System.Windows.Forms.MessageBox]::Show("Custom DoH requires a template URL (e.g. https://cloudflare-dns.com/dns-query).", "Missing DoH Template", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Warning)
+            return $false
+        }
+        $resolvedMode = "secure"
+        Set-ItemProperty -Path $regKey -Name "DnsOverHttpsTemplates" -Value $dnsTemplates -Type String -Force
+    } else {
+        if (Get-ItemProperty -Path $regKey -Name "DnsOverHttpsTemplates" -ErrorAction SilentlyContinue) {
+            Remove-ItemProperty -Path $regKey -Name "DnsOverHttpsTemplates" -ErrorAction SilentlyContinue
+        }
+    }
+
+    Set-ItemProperty -Path $regKey -Name "DnsOverHttpsMode" -Value $resolvedMode -Type String -Force
+    return $true
 }
 
 $form = New-Object System.Windows.Forms.Form
@@ -196,16 +212,34 @@ $form.Controls.Add($dnsLabel)
 $dnsDropdown = New-Object System.Windows.Forms.ComboBox
 $dnsDropdown.Location = New-Object System.Drawing.Point(180,530)
 $dnsDropdown.Size = New-Object System.Drawing.Size(150, 20)
-$dnsDropdown.Items.AddRange(@("automatic", "off", "custom"))
+$dnsDropdown.Items.AddRange(@("off", "automatic", "secure", "custom"))
 $dnsDropdown.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
 $dnsDropdown.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
 $dnsDropdown.ForeColor = [System.Drawing.Color]::White
 $form.Controls.Add($dnsDropdown)
 $y += 40
 
+$dnsTemplateLabel = New-Object System.Windows.Forms.Label
+$dnsTemplateLabel.Text = "Custom DoH template URL:"
+$dnsTemplateLabel.Location = New-Object System.Drawing.Point(35, 560)
+$dnsTemplateLabel.Size = New-Object System.Drawing.Size(170, 20)
+$form.Controls.Add($dnsTemplateLabel)
+
+$dnsTemplateBox = New-Object System.Windows.Forms.TextBox
+$dnsTemplateBox.Location = New-Object System.Drawing.Point(210, 555)
+$dnsTemplateBox.Size = New-Object System.Drawing.Size(510, 20)
+$dnsTemplateBox.BackColor = [System.Drawing.Color]::FromArgb(255, 25, 25, 25)
+$dnsTemplateBox.ForeColor = [System.Drawing.Color]::White
+$dnsTemplateBox.Enabled = $false
+$form.Controls.Add($dnsTemplateBox)
+
+$dnsDropdown.Add_SelectedIndexChanged({
+    $dnsTemplateBox.Enabled = ($dnsDropdown.SelectedItem -eq "custom")
+})
+
 $exportButton = New-Object System.Windows.Forms.Button
 $exportButton.Text = "Export Settings"
-$exportButton.Location = New-Object System.Drawing.Point(50, 580)
+$exportButton.Location = New-Object System.Drawing.Point(50, 610)
 $exportButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($exportButton)
 $exportButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -216,7 +250,7 @@ $exportButton.ForeColor = [System.Drawing.Color]::LightSalmon
 
 $importButton = New-Object System.Windows.Forms.Button
 $importButton.Text = "Import Settings"
-$importButton.Location = New-Object System.Drawing.Point(210, 580)
+$importButton.Location = New-Object System.Drawing.Point(210, 610)
 $importButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($importButton)
 $importButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -227,7 +261,7 @@ $importButton.ForeColor = [System.Drawing.Color]::LightSkyBlue
 
 $saveButton = New-Object System.Windows.Forms.Button
 $saveButton.Text = "Apply Settings"
-$saveButton.Location = New-Object System.Drawing.Point(410,580)
+$saveButton.Location = New-Object System.Drawing.Point(410,610)
 $saveButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($saveButton)
 $saveButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -250,7 +284,10 @@ $saveButton.Add_Click({
     }
     
     if ($dnsDropdown.SelectedItem) {
-        Set-DnsMode -dnsMode $dnsDropdown.SelectedItem
+        $dnsUpdated = Set-DnsSettings -dnsMode $dnsDropdown.SelectedItem -dnsTemplates $dnsTemplateBox.Text
+        if (-not $dnsUpdated) {
+            return
+        }
     }
 
     [System.Windows.Forms.MessageBox]::Show("Settings applied successfully! Restart Brave to see changes.", "SlimBrave", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)
@@ -292,7 +329,7 @@ function Reset-AllSettings {
 
 $resetButton = New-Object System.Windows.Forms.Button
 $resetButton.Text = "Reset All Settings"
-$resetButton.Location = New-Object System.Drawing.Point(570,580)
+$resetButton.Location = New-Object System.Drawing.Point(570,610)
 $resetButton.Size = New-Object System.Drawing.Size(120, 30)
 $form.Controls.Add($resetButton)
 $resetButton.FlatStyle = [System.Windows.Forms.FlatStyle]::Flat
@@ -321,6 +358,7 @@ $exportButton.Add_Click({
         $settingsToExport = @{
             Features = @()
             DnsMode = $dnsDropdown.SelectedItem
+            DnsTemplates = $dnsTemplateBox.Text
         }
         
         foreach ($checkbox in $allFeatures) {
@@ -363,6 +401,13 @@ $importButton.Add_Click({
             
             if ($importedSettings.DnsMode) {
                 $dnsDropdown.SelectedItem = $importedSettings.DnsMode
+            }
+
+            if ($importedSettings.DnsTemplates) {
+                $dnsTemplateBox.Text = $importedSettings.DnsTemplates
+                if (-not $importedSettings.DnsMode) {
+                    $dnsDropdown.SelectedItem = "custom"
+                }
             }
             
             [System.Windows.Forms.MessageBox]::Show("Settings imported successfully from:`n$($openFileDialog.FileName)", "Import Successful", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Information)

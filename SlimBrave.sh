@@ -97,6 +97,7 @@ apply_from_config() {
 
   local features
   local dns_mode
+  local config_dns_templates
   cleanup() {
     [[ -n "${SANITIZED_CONFIG:-}" ]] && rm -f "$SANITIZED_CONFIG"
     [[ -n "${TMP_POLICY:-}" ]] && rm -f "$TMP_POLICY"
@@ -107,6 +108,10 @@ apply_from_config() {
   sanitize_config "$config_path" "$SANITIZED_CONFIG"
   mapfile -t features < <(jq -r '.Features[]?' "$SANITIZED_CONFIG")
   dns_mode=$(jq -r '.DnsMode // empty' "$SANITIZED_CONFIG")
+  config_dns_templates=$(jq -r '.DnsTemplates // empty' "$SANITIZED_CONFIG")
+  if [[ -z "$dns_templates" && -n "$config_dns_templates" ]]; then
+    dns_templates="$config_dns_templates"
+  fi
 
   TMP_POLICY=$(mktemp)
 
@@ -163,7 +168,7 @@ apply_from_config() {
       if [[ -n "$dns_templates" ]]; then
         add_policy_entry "DnsOverHttpsTemplates" "\"$dns_templates\""
       else
-        echo "Warning: DnsMode is 'custom' but no --doh-templates provided." >&2
+        echo "Warning: DnsMode is 'custom' but no template provided (use DnsTemplates or --doh-templates)." >&2
       fi
     fi
   fi
@@ -231,7 +236,8 @@ export_to_config() {
 
   jq -n --argjson features "$(printf '%s\n' "${features[@]}" | jq -R . | jq -s .)" \
     --arg dnsmode "$dns_mode" \
-    '{Features: $features, DnsMode: ($dnsmode | if length > 0 then . else null end)}' >"$output_path"
+    --arg dnstemplates "$dns_templates" \
+    '{Features: $features, DnsMode: ($dnsmode | if length > 0 then . else null end), DnsTemplates: ($dnstemplates | if length > 0 then . else null end)}' >"$output_path"
 
   echo "SlimBrave settings exported to $output_path"
 }
@@ -402,18 +408,20 @@ run_interactive() {
       echo "SlimBrave Interactive Setup"
       echo "DNS Over HTTPS Mode"
       echo
-      echo " 1) automatic"
-      echo " 2) off"
-      echo " 3) custom"
-      echo " 4) skip"
+      echo " 1) off"
+      echo " 2) automatic"
+      echo " 3) secure"
+      echo " 4) custom"
+      echo " 5) skip"
       echo
       echo "Press a number to choose."
       read -rsn1 keypress
       case "$keypress" in
-        1) dns_mode="automatic"; return ;;
-        2) dns_mode="off"; return ;;
-        3) dns_mode="custom"; return ;;
-        4) dns_mode=""; return ;;
+        1) dns_mode="off"; return ;;
+        2) dns_mode="automatic"; return ;;
+        3) dns_mode="secure"; return ;;
+        4) dns_mode="custom"; return ;;
+        5) dns_mode=""; return ;;
       esac
     done
   }
@@ -482,7 +490,8 @@ run_interactive() {
 
   jq -n --argjson features "$features_json" \
     --arg dnsmode "$dns_mode" \
-    '{Features: $features, DnsMode: ($dnsmode | if length > 0 then . else null end)}' >"$temp_config"
+    --arg dnstemplates "$dns_templates" \
+    '{Features: $features, DnsMode: ($dnsmode | if length > 0 then . else null end), DnsTemplates: ($dnstemplates | if length > 0 then . else null end)}' >"$temp_config"
 
   apply_from_config "$temp_config" "$dns_templates"
 }
