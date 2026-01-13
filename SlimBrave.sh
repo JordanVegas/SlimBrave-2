@@ -120,7 +120,6 @@ apply_from_config() {
       continue
     fi
     case "$feature" in
-      MetricsReportingEnabled) add_policy_entry "$feature" "false" ;;
       SafeBrowsingExtendedReportingEnabled) add_policy_entry "$feature" "false" ;;
       UrlKeyedAnonymizedDataCollectionEnabled) add_policy_entry "$feature" "false" ;;
       FeedbackSurveysEnabled) add_policy_entry "$feature" "false" ;;
@@ -193,7 +192,6 @@ export_to_config() {
   local features=()
   local policy="$POLICY_FILE"
 
-  if jq -e '.MetricsReportingEnabled == false' "$policy" >/dev/null; then features+=("MetricsReportingEnabled"); fi
   if jq -e '.SafeBrowsingExtendedReportingEnabled == false' "$policy" >/dev/null; then features+=("SafeBrowsingExtendedReportingEnabled"); fi
   if jq -e '.UrlKeyedAnonymizedDataCollectionEnabled == false' "$policy" >/dev/null; then features+=("UrlKeyedAnonymizedDataCollectionEnabled"); fi
   if jq -e '.FeedbackSurveysEnabled == false' "$policy" >/dev/null; then features+=("FeedbackSurveysEnabled"); fi
@@ -252,13 +250,11 @@ run_interactive() {
   trap 'rm -f "$temp_config"' EXIT
 
   local -a telemetry_labels=(
-    "Disable Metrics Reporting"
     "Disable Safe Browsing Reporting"
     "Disable URL Data Collection"
     "Disable Feedback Surveys"
   )
   local -a telemetry_keys=(
-    "MetricsReportingEnabled"
     "SafeBrowsingExtendedReportingEnabled"
     "UrlKeyedAnonymizedDataCollectionEnabled"
     "FeedbackSurveysEnabled"

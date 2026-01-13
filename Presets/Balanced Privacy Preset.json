@@ -1,6 +1,5 @@
 {
     "Features": [
-        "MetricsReportingEnabled",
         "SafeBrowsingExtendedReportingEnabled",
         "UrlKeyedAnonymizedDataCollectionEnabled",
         "FeedbackSurveysEnabled",

@@ -1,6 +1,5 @@
 {
     "Features": [
-        "MetricsReportingEnabled",
         "FeedbackSurveysEnabled",
         "BraveRewardsDisabled",
         "BraveWalletDisabled",
