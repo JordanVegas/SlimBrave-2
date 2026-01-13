@@ -269,32 +269,14 @@ $saveButton.BackColor = [System.Drawing.Color]::FromArgb(150, 102, 102, 102)
 $saveButton.ForeColor = [System.Drawing.Color]::LightGreen
 
 $saveButton.Add_Click({
-    $selectedFeatures = @{}
     foreach ($checkbox in $allFeatures) {
         if ($checkbox.Checked) {
             $feature = $checkbox.Tag
-            $selectedFeatures[$feature.Key] = $feature
-        }
-    }
-
-    $uniqueKeys = $allFeatures | ForEach-Object { $_.Tag.Key } | Select-Object -Unique
-    foreach ($key in $uniqueKeys) {
-        if ($selectedFeatures.ContainsKey($key)) {
-            $feature = $selectedFeatures[$key]
             try {
                 Set-ItemProperty -Path $registryPath -Name $feature.Key -Value $feature.Value -Type $feature.Type -Force
                 Write-Host "Set $($feature.Key) to $($feature.Value)"
             } catch {
                 Write-Host "Failed to set $($feature.Key): $_"
-            }
-        } else {
-            if (Get-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue) {
-                try {
-                    Remove-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue
-                    Write-Host "Removed $key"
-                } catch {
-                    Write-Host "Failed to remove $key: $_"
-                }
             }
         }
     }
@@ -432,53 +414,5 @@ $importButton.Add_Click({
         }
     }
 })
-
-function Initialize-CurrentSettings {
-    $currentSettings = Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue
-
-    foreach ($checkbox in $allFeatures) {
-        $feature = $checkbox.Tag
-        $currentValue = $null
-        if ($currentSettings -and ($currentSettings.PSObject.Properties.Name -contains $feature.Key)) {
-            $currentValue = $currentSettings.$($feature.Key)
-        }
-
-        if ($null -ne $currentValue) {
-            if ($feature.Type -eq "DWord") {
-                $checkbox.Checked = ([int]$currentValue -eq [int]$feature.Value)
-            } else {
-                $checkbox.Checked = ($currentValue.ToString() -eq $feature.Value.ToString())
-            }
-        } else {
-            $checkbox.Checked = $false
-        }
-    }
-
-    if ($currentSettings) {
-        $currentDnsMode = $null
-        $currentDnsTemplates = $null
-        if ($currentSettings.PSObject.Properties.Name -contains "DnsOverHttpsMode") {
-            $currentDnsMode = $currentSettings.DnsOverHttpsMode
-        }
-        if ($currentSettings.PSObject.Properties.Name -contains "DnsOverHttpsTemplates") {
-            $currentDnsTemplates = $currentSettings.DnsOverHttpsTemplates
-        }
-
-        if (-not [string]::IsNullOrWhiteSpace($currentDnsTemplates)) {
-            $dnsDropdown.SelectedItem = "custom"
-            $dnsTemplateBox.Text = $currentDnsTemplates
-        } elseif (-not [string]::IsNullOrWhiteSpace($currentDnsMode)) {
-            $dnsDropdown.SelectedItem = $currentDnsMode
-        } else {
-            $dnsDropdown.SelectedItem = "off"
-        }
-    } else {
-        $dnsDropdown.SelectedItem = "off"
-    }
-
-    $dnsTemplateBox.Enabled = ($dnsDropdown.SelectedItem -eq "custom")
-}
-
-Initialize-CurrentSettings
 
 [void] $form.ShowDialog()
