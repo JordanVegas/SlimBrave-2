@@ -290,8 +290,13 @@ $saveButton.Add_Click({
         } else {
             if (Get-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue) {
                 try {
-                    Remove-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue
-                    Write-Host "Removed $key"
+                    if ($key -eq "BraveShieldsDisabledForUrls") {
+                        Set-ItemProperty -Path $registryPath -Name $key -Value "[]" -Type String -Force
+                        Write-Host "Reset $key to empty list"
+                    } else {
+                        Remove-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue
+                        Write-Host "Removed $key"
+                    }
                 } catch {
                     Write-Host "Failed to remove ${key}: $_"
                 }
