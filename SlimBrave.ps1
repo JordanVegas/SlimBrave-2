@@ -286,25 +286,26 @@ $saveButton.Add_Click({
             try {
                 Set-ItemProperty -Path $registryPath -Name $feature.Key -Value $feature.Value -Type $feature.Type -Force
                 Write-Host "Set $($feature.Key) to $($feature.Value)"
+                if ($key -eq "BraveShieldsDisabledForUrls" -and (Test-Path -Path $userRegistryPath)) {
+                    Remove-ItemProperty -Path $userRegistryPath -Name $key -ErrorAction SilentlyContinue
+                }
             } catch {
                 Write-Host "Failed to set $($feature.Key): $_"
             }
         } else {
-            if (Get-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue) {
-                try {
-                    if ($key -eq "BraveShieldsDisabledForUrls") {
-                        Remove-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue
-                        if (Test-Path -Path $userRegistryPath) {
-                            Remove-ItemProperty -Path $userRegistryPath -Name $key -ErrorAction SilentlyContinue
-                        }
-                        Write-Host "Removed $key from policy paths"
-                    } else {
-                        Remove-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue
-                        Write-Host "Removed $key"
+            try {
+                if ($key -eq "BraveShieldsDisabledForUrls") {
+                    Remove-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue
+                    if (Test-Path -Path $userRegistryPath) {
+                        Remove-ItemProperty -Path $userRegistryPath -Name $key -ErrorAction SilentlyContinue
                     }
-                } catch {
-                    Write-Host "Failed to remove ${key}: $_"
+                    Write-Host "Removed $key from policy paths"
+                } elseif (Get-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue) {
+                    Remove-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue
+                    Write-Host "Removed $key"
                 }
+            } catch {
+                Write-Host "Failed to remove ${key}: $_"
             }
         }
     }
