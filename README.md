@@ -5,7 +5,7 @@
 </div>
 
 ---
-SlimBrave 2 was created because the original creator of SlimBrave stopped responding. SlimBrave 2 presents an updated version of SlimBrave with Linux support and up to date policies.
+SlimBrave 2 presents an updated version of SlimBrave with Linux support and up to date policies.
 
 
 ## Brave Browser Debloater
