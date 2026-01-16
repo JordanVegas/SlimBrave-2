@@ -6,7 +6,9 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$registryPath = "HKLM:\SOFTWARE\Policies\BraveSoftware\Brave"
+$machineRegistryPath = "HKLM:\SOFTWARE\Policies\BraveSoftware\Brave"
+$userRegistryPath = "HKCU:\SOFTWARE\Policies\BraveSoftware\Brave"
+$registryPath = $machineRegistryPath
 
 if (-not (Test-Path -Path $registryPath)) {
     New-Item -Path $registryPath -Force
@@ -284,17 +286,26 @@ $saveButton.Add_Click({
             try {
                 Set-ItemProperty -Path $registryPath -Name $feature.Key -Value $feature.Value -Type $feature.Type -Force
                 Write-Host "Set $($feature.Key) to $($feature.Value)"
+                if ($key -eq "BraveShieldsDisabledForUrls" -and (Test-Path -Path $userRegistryPath)) {
+                    Remove-ItemProperty -Path $userRegistryPath -Name $key -ErrorAction SilentlyContinue
+                }
             } catch {
                 Write-Host "Failed to set $($feature.Key): $_"
             }
         } else {
-            if (Get-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue) {
-                try {
+            try {
+                if ($key -eq "BraveShieldsDisabledForUrls") {
+                    Remove-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue
+                    if (Test-Path -Path $userRegistryPath) {
+                        Remove-ItemProperty -Path $userRegistryPath -Name $key -ErrorAction SilentlyContinue
+                    }
+                    Write-Host "Removed $key from policy paths"
+                } elseif (Get-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue) {
                     Remove-ItemProperty -Path $registryPath -Name $key -ErrorAction SilentlyContinue
                     Write-Host "Removed $key"
-                } catch {
-                    Write-Host "Failed to remove ${key}: $_"
                 }
+            } catch {
+                Write-Host "Failed to remove ${key}: $_"
             }
         }
     }
@@ -320,6 +331,9 @@ function Reset-AllSettings {
     if ($confirm -eq "Yes") {
         try {
             Remove-Item -Path $registryPath -Recurse -Force
+            if (Test-Path -Path $userRegistryPath) {
+                Remove-Item -Path $userRegistryPath -Recurse -Force
+            }
             New-Item -Path $registryPath -Force | Out-Null
 
             [System.Windows.Forms.MessageBox]::Show(
@@ -434,13 +448,16 @@ $importButton.Add_Click({
 })
 
 function Initialize-CurrentSettings {
-    $currentSettings = Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue
+    $machineSettings = Get-ItemProperty -Path $registryPath -ErrorAction SilentlyContinue
+    $userSettings = Get-ItemProperty -Path $userRegistryPath -ErrorAction SilentlyContinue
 
     foreach ($checkbox in $allFeatures) {
         $feature = $checkbox.Tag
         $currentValue = $null
-        if ($currentSettings -and ($currentSettings.PSObject.Properties.Name -contains $feature.Key)) {
-            $currentValue = $currentSettings.$($feature.Key)
+        if ($machineSettings -and ($machineSettings.PSObject.Properties.Name -contains $feature.Key)) {
+            $currentValue = $machineSettings.$($feature.Key)
+        } elseif ($userSettings -and ($userSettings.PSObject.Properties.Name -contains $feature.Key)) {
+            $currentValue = $userSettings.$($feature.Key)
         }
 
         if ($null -ne $currentValue) {
@@ -454,14 +471,18 @@ function Initialize-CurrentSettings {
         }
     }
 
-    if ($currentSettings) {
+    if ($machineSettings -or $userSettings) {
         $currentDnsMode = $null
         $currentDnsTemplates = $null
-        if ($currentSettings.PSObject.Properties.Name -contains "DnsOverHttpsMode") {
-            $currentDnsMode = $currentSettings.DnsOverHttpsMode
+        if ($machineSettings -and ($machineSettings.PSObject.Properties.Name -contains "DnsOverHttpsMode")) {
+            $currentDnsMode = $machineSettings.DnsOverHttpsMode
+        } elseif ($userSettings -and ($userSettings.PSObject.Properties.Name -contains "DnsOverHttpsMode")) {
+            $currentDnsMode = $userSettings.DnsOverHttpsMode
         }
-        if ($currentSettings.PSObject.Properties.Name -contains "DnsOverHttpsTemplates") {
-            $currentDnsTemplates = $currentSettings.DnsOverHttpsTemplates
+        if ($machineSettings -and ($machineSettings.PSObject.Properties.Name -contains "DnsOverHttpsTemplates")) {
+            $currentDnsTemplates = $machineSettings.DnsOverHttpsTemplates
+        } elseif ($userSettings -and ($userSettings.PSObject.Properties.Name -contains "DnsOverHttpsTemplates")) {
+            $currentDnsTemplates = $userSettings.DnsOverHttpsTemplates
         }
 
         if (-not [string]::IsNullOrWhiteSpace($currentDnsTemplates)) {
